@@ -10,7 +10,7 @@ pipeline {
   agent { label 'master' }
     tools {
       maven 'Maven'
-      jdk 'JAVA_HOME'
+      jdk 'JDK 1.11.*'
     }
   options { 
     timestamps () 
@@ -21,7 +21,7 @@ pipeline {
 // artifactNumToKeepStr - Max # of builds to keep with artifacts	  
 }	
   environment {
-    SONAR_HOME = "${tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'}"
+    SONAR_HOME = "${tool name: 'SonarQube Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'}"
     DOCKER_TAG = DockerTag()	  
   }  
   stages {
@@ -48,16 +48,16 @@ pipeline {
 		  	sh 'mv target/*.war target/helloworld.war'
         }			                      
       }
-    stage('SonarQube_Analysis') {
-      steps {
-	    script {
-          scannerHome = tool 'sonar-scanner'
-        }
-        withSonarQubeEnv('sonar') {
-      	  sh """${scannerHome}/bin/sonar-scanner"""
-        }
-      }	
-    }	
+    stage('SonarQube analysis') {
+            environment {
+                scannerHome = tool 'SonarQube Scanner' 
+            }
+            steps {
+                withSonarQubeEnv(installationName: 'SonarServer') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }	
 	stage('Quality_Gate') {
 	  steps {
 	    timeout(time: 3, unit: 'MINUTES') {
@@ -67,14 +67,14 @@ pipeline {
     }
   stage('Build Docker Image'){
     steps{
-      sh 'docker build -t dileep95/ansibledeploy:${DOCKER_TAG} .'
+      sh 'docker build -t 20152282/ansibledeploy:${DOCKER_TAG} .'
     }
   }	  	 
   stage('Docker Container'){
     steps{
-      withCredentials([usernamePassword(credentialsId: 'docker', passwordVariable: 'docker_pass', usernameVariable: 'docker_user')]) {
-	  sh 'docker login -u ${docker_user} -p ${docker_pass}'
-      	  sh 'docker push dileep95/ansibledeploy:${DOCKER_TAG}'
+      withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'docker_pass')]) {
+	  sh 'docker login -u 20152282 -p ${docker_pass}'
+      	  sh 'docker push 20152282/ansibledeploy:${DOCKER_TAG}'
 	  }
     }
  }
